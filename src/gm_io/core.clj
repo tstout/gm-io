@@ -5,13 +5,9 @@
             [clojure-mail.parser :refer [html->text]]
             [clojure-mail.gmail :as gmail]
             [clojure-mail.message :as message]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [gm-io.creds :refer [fetch-account]])
   (:gen-class))
-
-;; (defn fetch-inbox [m]
-;;   (let [{:keys [user pass]} m]
-;;     (->> (gmail/store user pass)
-;;          inbox)))
 
 (defn find-in-inbox
   "Basic convenience fn for searching an inbox. Note: this is an
@@ -25,7 +21,8 @@
 
 
 (defn recent-boa
-  "expensive operation, returns a future"
+  "expensive operation, returns a future so that interaction in a repl won't get 
+   blocked for a long period of time"
   [m]
   (future
     (->> m
@@ -39,19 +36,20 @@
        (map message/read-message)
        vec))
 
+;; TODO do some nested map destructuring here
 (defn extract-body [msg]
-  (condp #(starts-with? %2 %1) msg
-    "TEXT/HTML" (do 1)
-    "TEXT/PLAIN" (do 2)))
+  (let [{:keys [body]} msg]
+    (condp #(starts-with? %2 %1) (:content-type body)
+      "TEXT/HTML" (html->text (:body body))
+      "TEXT/PLAIN" (:body body))))
 
 (defn -main [& args] (println "hello world"))
 
 (comment
 
-  (identity 4)
-
-  (def recent (recent-boa {:user "todd.tstout@gmail.com"
-                           :pass "foobar"}))
+  (def recent (recent-boa
+               (fetch-account
+                "http://localhost:8080/v1/config/account/gmail-tstout")))
 
   (realized? recent)
 
@@ -59,15 +57,27 @@
 
   (type (first @recent))
 
+  (-> @recent first :body)
+
+  (frequencies )
+
+
+  (partition)
 
   @recent
 
-  (extract-body "TEXT/HTML;")
+  (def t-body
+    (extract-body (-> @recent (nth 6))))
 
+  t-body
 
-  (map #(-> % :body :content-type) @recent)
+  (clojure.string/split t-body #"(at:|On:|Amount:)")
 
-  (html->text (-> (second @recent) :body :body))
+  (clojure.string/split t-body #" ")
+
+  
+  (frequencies ["at:"])
+
 
   (clojure.string/split "abcedef alsalfj adfasfd Amount: $ 884.91" #"Amount:")
   ;;
