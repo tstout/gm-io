@@ -73,60 +73,76 @@
                            words)}))
 
 (defn extract-amt [index words]
-  (subvec words (+ 1 index) (+ 3 index)))
+  (-> (subvec words (+ 1 index) (+ 3 index))
+      last
+      bigdec))
+
+(defn extract-merchant [index words])
+
+(defn extract-date [index words]
+  (string/join " " (subvec words (+ 1 index) (+ 4 index))))
 
 
-(defn- process-txn [txn]
-  ;; reduce on this txn structure ([index pos-key] ...):
-  ;; ([19 "Amount:"] [24 "at:"] [28 "On:"]) 
-  (reduce {} (fn [accum coordinate]
-               (let [[index pos-key] coordinate]
-                 (case pos-key
-                   "Amount:" (assoc accum :amount (str (subvec))))))
+(defn- process-txn
+  "Reduce on this txn structure ([index pos-key] ...):
+  ([19 \"Amount:\"] [24 \"at:\"] [28 \"On:\"]) 
+  words is a collection of the words making up the mail body"
+  [txn words]
+  ;;(prn txn)
+  (reduce (fn [accum coordinate]
+            (let [[index pos-key] coordinate]
+              #_(prn (format "index: %d pos-key: %s" index pos-key))
+              (case pos-key
+                "Amount:" (merge {:amt (extract-amt index words)} accum)
+                "at:"     (merge {:at "todo"} accum)
+                "On:"     (merge {:on (extract-date index words)} accum))))
+          {}
           txn))
 
 
 (defn extract-values-of-interest [mail-body]
-  (let [vals (locate-values-of-interest mail-body)
-        txns (partition-all 3 positions)]
-    (map process-txn txns)
+  (let [{:keys [words values]} (locate-values-of-interest mail-body)
+        txns                   (partition-all 3 values)]
+    #_(prn txns)
+    (map #(process-txn %1 words) txns)))
 
 
-    (defn -main [& args] (println "hello world"))
+(defn -main [& args] (println "hello world"))
 
-    (comment
+(comment
 
-      (def recent (recent-boa
-                   (fetch-account
-                    "http://localhost:8080/v1/config/account/gmail-tstout")))
-
-
-      (locate-values-of-interest (first @recent))
+  ()
+  (def recent (recent-boa
+               (fetch-account
+                "http://localhost:8080/v1/config/account/gmail-tstout")))
 
 
+  (def t-words (-> (first @recent) locate-values-of-interest :words))
 
-      (extract-values-of-interest (first @recent))
+  t-words
 
-      (first @recent)
+  (subvec t-words 51 54)
+
+  (locate-values-of-interest (first @recent))
+
+  (extract-values-of-interest (first @recent))
+
+  (extract-values-of-interest (first @recent))
+
+  (first @recent)
 
   ;;(mod )
 
-      (realized? recent)
+  (realized? recent)
 
 
-      (count @recent)
+  (count @recent)
 
-      (type (first @recent))
+  (type (first @recent))
 
-      (-> @recent first :body)
+  (-> @recent first :body)
 
-      @recent
-
-      (def t-body
-        (body-words (-> @recent (nth 1))))
-
-      t-body
-      (nth t-body 27)
+  @recent
 
   ;;
-      )"
+  )
